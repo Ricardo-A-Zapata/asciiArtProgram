@@ -1,3 +1,4 @@
+// Spinning Shapes by Ricardo Zapata
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,9 +27,6 @@ float incrementSpeed = 0.6;
 float x, y, z, ooz;
 int xp, yp, idx;
 
-// Flags to track keypresses for simultaneous movements
-int upPressed = 0, downPressed = 0, leftPressed = 0, rightPressed = 0;
-
 // Function to set the terminal in raw mode to capture input without waiting for Enter
 void setTerminalRawMode(int enable) {
     static struct termios oldt, newt;
@@ -36,41 +34,19 @@ void setTerminalRawMode(int enable) {
         tcgetattr(STDIN_FILENO, &oldt); // Save the terminal settings
         newt = oldt;
         newt.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode (line buffering) and echo
-        newt.c_cc[VMIN] = 0; // Non-blocking mode, no minimum characters for read()
-        newt.c_cc[VTIME] = 0; // No timeout for read()
         tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Apply the new settings
     } else {
         tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore the old settings
     }
 }
 
-// Function to check for key presses (arrow keys and 'q' for quit)
-void handleInput() {
-    char ch[3];  // To capture escape sequences (like arrow keys)
-    int nread = read(STDIN_FILENO, ch, sizeof(ch));
-
-    if (nread == 0) return;  // No input, just return
-
-    if (ch[0] == '\x1b' && ch[1] == '[') {  // Escape sequence detected
-        switch(ch[2]) {
-            case 'A':  // Up arrow
-                upPressed = 1;
-                break;
-            case 'B':  // Down arrow
-                downPressed = 1;
-                break;
-            case 'C':  // Right arrow
-                rightPressed = 1;
-                break;
-            case 'D':  // Left arrow
-                leftPressed = 1;
-                break;
-        }
-    } else if (ch[0] == 'q') {  // Quit the program if 'q' is pressed
-        setTerminalRawMode(0);  // Restore terminal settings
-        printf("\nProgram exited.\n");
-        exit(0);
-    }
+// Function to check if a key is pressed without blocking
+int kbhit() {
+    struct timeval tv = {0L, 0L};  // No wait time
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
 }
 
 // Proper rotation matrix calculation for 3D points
@@ -137,45 +113,26 @@ void drawCube(float halfCubeWidth) {
     }
 }
 
-// Function to display instructions
-void displayInstructions() {
-    printf("\n\nControls:\n");
-    printf("  Use arrow keys to rotate the cube:\n");
-    printf("    - Up Arrow:    Rotate upwards (X-axis)\n");
-    printf("    - Down Arrow:  Rotate downwards (X-axis)\n");
-    printf("    - Left Arrow:  Rotate left (Y-axis)\n");
-    printf("    - Right Arrow: Rotate right (Y-axis)\n");
-    printf("  Press 'q' to quit the program.\n");
+// Function to display the main menu
+void displayMenu() {
+    printf("\x1b[2J");  // Clear screen
+    printf("\x1b[H");   // Move cursor to home position
+    printf("===== Shape Rotation Program =====\n");
+    printf("Choose a shape to rotate:\n");
+    printf("1. Cube\n");
+    printf("q. Quit\n");
+    printf("Enter your choice: ");
 }
 
-// Function to apply movement based on keypress flags
-void applyMovement() {
-    if (upPressed) rotationAngleAroundXAxis -= 0.05;
-    if (downPressed) rotationAngleAroundXAxis += 0.05;
-    if (leftPressed) rotationAngleAroundYAxis -= 0.05;
-    if (rightPressed) rotationAngleAroundYAxis += 0.05;
-}
-
-int main() {
-    // Set terminal to raw mode to capture keypresses without waiting for Enter
-    setTerminalRawMode(1);
-
-    // Clear the screen
-    printf("\x1b[2J");
-
-    // Initial stationary cube
+// Function to handle the shape rotation
+void handleShapeRotation() {
+    char ch;
     while(1) {
         // Clear buffers
         memset(buffer, backgroundASCIICode, consoleScreenBufferWidth * consoleScreenBufferHeight);
         memset(zBuffer, 0, consoleScreenBufferWidth * consoleScreenBufferHeight * sizeof(float));
 
-        // Handle input and update flags
-        handleInput();
-
-        // Apply rotations based on keypress flags
-        applyMovement();
-
-        // Draw the cube
+        // Draw the cube (more shapes can be added later)
         drawCube(halfCubeWidth);
 
         // Print the buffer to the console
@@ -184,15 +141,61 @@ int main() {
             putchar(k % consoleScreenBufferWidth ? buffer[k] : 10);  // Newline after each row
         }
 
-        // Display the controls below the cube
-        displayInstructions();
+        printf("\nPress 'm' for Menu, 'q' to Quit.\n");
+
+        // Check for key inputs
+        while (kbhit()) {
+            ch = getchar();
+            if (ch == '\x1b') {  // Escape sequence for arrow keys
+                getchar();  // Skip the '['
+                switch(getchar()) {  // Capture the actual arrow key
+                    case 'A':  // Up arrow
+                        rotationAngleAroundXAxis -= 0.1;
+                        break;
+                    case 'B':  // Down arrow
+                        rotationAngleAroundXAxis += 0.1;
+                        break;
+                    case 'C':  // Right arrow
+                        rotationAngleAroundYAxis += 0.1;
+                        break;
+                    case 'D':  // Left arrow
+                        rotationAngleAroundYAxis -= 0.1;
+                        break;
+                }
+            } else if (ch == 'm') {  // Go back to the menu
+                return;
+            } else if (ch == 'q') {  // Quit the program
+                setTerminalRawMode(0);  // Restore terminal settings
+                printf("\nProgram exited.\n");
+                exit(0);
+            }
+        }
 
         // Add a short delay for smoother animation
-        usleep(5000);
+        usleep(2000);
+    }
+}
+
+int main() {
+    char choice;
+
+    // Set terminal to raw mode to capture keypresses without waiting for Enter
+    setTerminalRawMode(1);
+
+    while(1) {
+        displayMenu();
+        choice = getchar();
+
+        if (choice == '1') {
+            handleShapeRotation();  // Start rotating the cube
+        } else if (choice == 'q') {
+            setTerminalRawMode(0);  // Restore terminal settings
+            printf("\nProgram exited.\n");
+            return 0;
+        }
     }
 
     // Restore terminal settings
     setTerminalRawMode(0);
-
     return 0;
 }
