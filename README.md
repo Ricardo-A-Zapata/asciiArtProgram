@@ -3,4 +3,4 @@ Spinning cube made up of ASCII characters using graphics and linear algebra know
 
 Basic 3D Rotations for X, Y, and Z planes.
 
-![3D Rotations](./assets/3DRotationsXYZ.svg)
+![3D Rotations](./assets/3DRotationsXYZ.png)
