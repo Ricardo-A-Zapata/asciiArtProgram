@@ -23,7 +23,7 @@ float zBuffer[160 * 44];
 char buffer[160 * 44];
 
 int backgroundASCIICode = ' ';
-int distanceFromCam = 60;
+int distanceFromCam = 55;
 
 // Scaling constant for 3D to 2D projection
 float K1 = 40; 
@@ -37,8 +37,8 @@ float rotationSpeed = 0.25;
 float x, y, z, ooz;
 int xp, yp, idx;
 
-// ASCII characters for shading based on depth (wider range for more detailed rendering)
-const char shadingCharacters[] = " .:-=+*#%@";
+// Updated shading characters array with a wider range of characters
+const char shadingCharacters[] = ".'^,:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
 
 // ASCII characters for each face of the cube
 const char cubeFaceChar[6] = {'#', '@', '%', '*', '+', '='};
@@ -98,14 +98,16 @@ void rotate3D(float *x, float *y, float *z) {
 }
 
 
+// Function to calculate shading based on depth with a wider array of characters
 char calculateShading(float zValue) {
-    // Adjust depth value based on distance to camera
     float depthRange = distanceFromCam + halfCubeWidth * 2;
-    // Use full shading character range
-    int shadeIndex = (int)((zValue / depthRange) * (strlen(shadingCharacters) - 1)); 
+    
+    // Calculate shading index based on normalized depth value, with wider character range
+    int shadeIndex = (int)((zValue / depthRange) * (strlen(shadingCharacters) - 1));
 
     if (shadeIndex < 0) shadeIndex = 0;
     if (shadeIndex >= (int)strlen(shadingCharacters)) shadeIndex = strlen(shadingCharacters) - 1;
+
     return shadingCharacters[shadeIndex];
 }
 
@@ -162,88 +164,74 @@ void drawCube(float halfCubeWidth) {
 }
 
 
-// Function to draw the sphere with denser ASCII characters without distortion
+
+// Function to draw the sphere with refined depth-based shading
 void drawSphere(float radius) {
-    // No coordinate scaling here, just denser increment steps
-    for (float theta = 0; theta < 2 * M_PI; theta += incrementSpeed / 2) {  // Denser theta
-        for (float phi = 0; phi < M_PI; phi += incrementSpeed / 2) {  // Denser phi
-            // Calculate 3D coordinates of the sphere surface
+    // Use z-depth for shading based on proximity to the camera
+    for (float theta = 0; theta < 2 * M_PI; theta += incrementSpeed / 2) {
+        for (float phi = 0; phi < M_PI; phi += incrementSpeed / 2) {
             float sphereX = radius * sin(phi) * cos(theta);
             float sphereY = radius * sin(phi) * sin(theta);
             float sphereZ = radius * cos(phi);
-            
-            // Use different characters based on theta (longitude) and phi (latitude) for shading
-            char shadingChar;
-            if (phi < M_PI / 6) {
-                shadingChar = '.';
-            } else if (phi < M_PI / 3) {
-                shadingChar = ':';
-            } else if (phi < M_PI / 2) {
-                shadingChar = '-';
-            } else if (phi < 2 * M_PI / 3) {
-                shadingChar = '+';
-            } else if (phi < 5 * M_PI / 6) {
-                shadingChar = '#';
-            } else {
-                shadingChar = '@';
-            }
 
-            // Use the original calculate function to render characters based on the 3D projection
+            // Calculate shading based on z-depth using refined character array
+            float zDepth = sphereZ + distanceFromCam;
+            char shadingChar = calculateShading(zDepth);
+
+            // Render the calculated point on the sphere
             calculateForSurfaceWithCustomChar(sphereX, sphereY, sphereZ, shadingChar);
         }
     }
 }
 
-
-
-// Function to draw the pyramid with denser faces without distorting the shape
+// Function to draw the pyramid with a solid base and better face filling to avoid hollowness
 void drawPyramid(float height, float baseHalfWidth) {
-    // Define vertices
+    // Scale the pyramid by increasing both height and base width
+    float scaledHeight = height * 0.99;  // Increase the height
+    float scaledBaseHalfWidth = baseHalfWidth * 0.99;  // Increase the base size
+
+    // Define vertices for the larger pyramid
     float vertices[5][3] = {
-        {0, height, 0},  // Apex of the pyramid
+        {0, scaledHeight, 0},  // Apex of the pyramid
 
         // Base vertices
-        {-baseHalfWidth, 0, -baseHalfWidth},
-        {baseHalfWidth, 0, -baseHalfWidth},
-        {baseHalfWidth, 0, baseHalfWidth},
-        {-baseHalfWidth, 0, baseHalfWidth}
+        {-scaledBaseHalfWidth, 0, -scaledBaseHalfWidth},
+        {scaledBaseHalfWidth, 0, -scaledBaseHalfWidth},
+        {scaledBaseHalfWidth, 0, scaledBaseHalfWidth},
+        {-scaledBaseHalfWidth, 0, scaledBaseHalfWidth}
     };
 
-    // Assign different characters to each face for clarity
-    char faceChars[4] = {'#', '@', '%', '*'};
+    // Assign distinct characters for each face (4 faces + base)
+    char faceChars[5] = {'#', '@', '%', '*', '+'};  // Last character for base
 
-    // Draw the four triangular faces of the pyramid with denser steps
+    // Improved filling for the triangular faces
     for (int i = 1; i <= 4; ++i) {
         int nextIndex = (i % 4) + 1;
-        char faceChar = faceChars[i - 1];  // Different character for each face
-        
-        // Fill triangular faces by interpolating between apex and base edges with denser points
-        for (float t1 = 0; t1 <= 1; t1 += incrementSpeed / 2) {  // Denser t1
-            for (float t2 = 0; t2 <= 1 - t1; t2 += incrementSpeed / 2) {  // Denser t2
+        char faceChar = faceChars[i - 1];  // Unique character for each triangular face
+
+        // Fill triangular faces more densely by interpolating between apex and base edges
+        for (float t1 = 0; t1 <= 1; t1 += incrementSpeed / 5) {  // Denser filling
+            for (float t2 = 0; t2 <= 1 - t1; t2 += incrementSpeed / 5) {
                 float faceX = vertices[0][0] * (1 - t1 - t2) + vertices[i][0] * t1 + vertices[nextIndex][0] * t2;
                 float faceY = vertices[0][1] * (1 - t1 - t2) + vertices[i][1] * t1 + vertices[nextIndex][1] * t2;
                 float faceZ = vertices[0][2] * (1 - t1 - t2) + vertices[i][2] * t1 + vertices[nextIndex][2] * t2;
-                
+
+                // Render the face using a distinct character and denser interpolation
                 calculateForSurfaceWithCustomChar(faceX, faceY, faceZ, faceChar);
             }
         }
     }
 
-    // Draw the base of the pyramid with denser points
-    for (int i = 1; i <= 4; ++i) {
-        int nextIndex = (i % 4) + 1;
-        for (float t = 0; t <= 1; t += incrementSpeed / 2) {  // Denser base
-            float baseX = vertices[i][0] * (1 - t) + vertices[nextIndex][0] * t;
-            float baseY = vertices[i][1] * (1 - t) + vertices[nextIndex][1] * t;
-            float baseZ = vertices[i][2] * (1 - t) + vertices[nextIndex][2] * t;
+    // Fill the base of the pyramid using its own distinct character
+    for (float baseX = -scaledBaseHalfWidth; baseX <= scaledBaseHalfWidth; baseX += incrementSpeed / 3) {
+        for (float baseZ = -scaledBaseHalfWidth; baseZ <= scaledBaseHalfWidth; baseZ += incrementSpeed / 3) {
+            float baseY = 0;  // Base lies on the Y = 0 plane
 
-            calculateForSurfaceWithCustomChar(baseX, baseY, baseZ, '=');
+            // Render the base with its distinct character
+            calculateForSurfaceWithCustomChar(baseX, baseY, baseZ, faceChars[4]);
         }
     }
 }
-
-
-
 
 
 
