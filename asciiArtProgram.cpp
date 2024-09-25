@@ -10,7 +10,7 @@ float rotationAngleAroundXAxis = 0;
 float rotationAngleAroundYAxis = 0;
 float rotationAngleAroundZAxis = 0;
 
-float halfCubeWidth = 10;
+float halfCubeWidth = 15;
 int consoleScreenBufferWidth = 160, consoleScreenBufferHeight = 44;
 
 // Default to cube
@@ -137,49 +137,66 @@ void calculateForSurfaceWithCustomChar(float shapeX, float shapeY, float shapeZ,
     }
 }
 
+
+
 // Function to draw the cube with different characters on each face
 void drawCube(float halfCubeWidth) {
     for(float cubeX = -halfCubeWidth; cubeX < halfCubeWidth; cubeX += incrementSpeed) {
         for (float cubeY = -halfCubeWidth; cubeY < halfCubeWidth; cubeY += incrementSpeed) {
             // Front face (@)
-            calculateForSurfaceWithCustomChar(cubeX, cubeY, -halfCubeWidth, cubeFaceChar
-        [0]);
+            calculateForSurfaceWithCustomChar(cubeX, cubeY, -halfCubeWidth, '@');
             // Back face (%)
-            calculateForSurfaceWithCustomChar(-cubeX, cubeY, halfCubeWidth, cubeFaceChar
-        [1]);
+            calculateForSurfaceWithCustomChar(-cubeX, cubeY, halfCubeWidth, '%');
             
             // Left face (*)
-            calculateForSurfaceWithCustomChar(-halfCubeWidth, cubeY, cubeX, cubeFaceChar
-        [2]);
+            calculateForSurfaceWithCustomChar(-halfCubeWidth, cubeY, cubeX, '*');
             // Right face (+)
-            calculateForSurfaceWithCustomChar(halfCubeWidth, cubeY, -cubeX, cubeFaceChar
-        [3]);
+            calculateForSurfaceWithCustomChar(halfCubeWidth, cubeY, -cubeX, '+');
             
             // Top face (#)
-            calculateForSurfaceWithCustomChar(cubeX, halfCubeWidth, cubeY, cubeFaceChar
-        [4]);
+            calculateForSurfaceWithCustomChar(cubeX, halfCubeWidth, cubeY, '#');
             // Bottom face (=)
-            calculateForSurfaceWithCustomChar(cubeX, -halfCubeWidth, -cubeY, cubeFaceChar
-        [5]);
+            calculateForSurfaceWithCustomChar(cubeX, -halfCubeWidth, -cubeY, '=');
         }
     }
 }
 
+
+// Function to draw the sphere with denser ASCII characters without distortion
 void drawSphere(float radius) {
-    for (float theta = 0; theta < 2 * M_PI; theta += incrementSpeed) {
-        for (float phi = 0; phi < M_PI; phi += incrementSpeed) {
+    // No coordinate scaling here, just denser increment steps
+    for (float theta = 0; theta < 2 * M_PI; theta += incrementSpeed / 2) {  // Denser theta
+        for (float phi = 0; phi < M_PI; phi += incrementSpeed / 2) {  // Denser phi
             // Calculate 3D coordinates of the sphere surface
             float sphereX = radius * sin(phi) * cos(theta);
             float sphereY = radius * sin(phi) * sin(theta);
             float sphereZ = radius * cos(phi);
             
-            // Project the 3D points into the 2D space
-            calculateForSurfaceWithCustomChar(sphereX, sphereY, sphereZ, shadingCharacters[4]);
+            // Use different characters based on theta (longitude) and phi (latitude) for shading
+            char shadingChar;
+            if (phi < M_PI / 6) {
+                shadingChar = '.';
+            } else if (phi < M_PI / 3) {
+                shadingChar = ':';
+            } else if (phi < M_PI / 2) {
+                shadingChar = '-';
+            } else if (phi < 2 * M_PI / 3) {
+                shadingChar = '+';
+            } else if (phi < 5 * M_PI / 6) {
+                shadingChar = '#';
+            } else {
+                shadingChar = '@';
+            }
+
+            // Use the original calculate function to render characters based on the 3D projection
+            calculateForSurfaceWithCustomChar(sphereX, sphereY, sphereZ, shadingChar);
         }
     }
 }
 
-// Function to draw the triangular faces of the pyramid
+
+
+// Function to draw the pyramid with denser faces without distorting the shape
 void drawPyramid(float height, float baseHalfWidth) {
     // Define vertices
     float vertices[5][3] = {
@@ -192,32 +209,44 @@ void drawPyramid(float height, float baseHalfWidth) {
         {-baseHalfWidth, 0, baseHalfWidth}
     };
 
-    // Draw the four triangular faces of the pyramid
+    // Assign different characters to each face for clarity
+    char faceChars[4] = {'#', '@', '%', '*'};
+
+    // Draw the four triangular faces of the pyramid with denser steps
     for (int i = 1; i <= 4; ++i) {
         int nextIndex = (i % 4) + 1;
+        char faceChar = faceChars[i - 1];  // Different character for each face
         
-        // Fill triangular faces by interpolating between apex and base edges
-        for (float t1 = 0; t1 <= 1; t1 += incrementSpeed) {
-            for (float t2 = 0; t2 <= 1 - t1; t2 += incrementSpeed) {
+        // Fill triangular faces by interpolating between apex and base edges with denser points
+        for (float t1 = 0; t1 <= 1; t1 += incrementSpeed / 2) {  // Denser t1
+            for (float t2 = 0; t2 <= 1 - t1; t2 += incrementSpeed / 2) {  // Denser t2
                 float faceX = vertices[0][0] * (1 - t1 - t2) + vertices[i][0] * t1 + vertices[nextIndex][0] * t2;
                 float faceY = vertices[0][1] * (1 - t1 - t2) + vertices[i][1] * t1 + vertices[nextIndex][1] * t2;
                 float faceZ = vertices[0][2] * (1 - t1 - t2) + vertices[i][2] * t1 + vertices[nextIndex][2] * t2;
-                calculateForSurfaceWithCustomChar(faceX, faceY, faceZ, shadingCharacters[4]);
+                
+                calculateForSurfaceWithCustomChar(faceX, faceY, faceZ, faceChar);
             }
         }
     }
 
-    // Draw the base of the pyramid
+    // Draw the base of the pyramid with denser points
     for (int i = 1; i <= 4; ++i) {
         int nextIndex = (i % 4) + 1;
-        for (float t = 0; t <= 1; t += incrementSpeed) {
+        for (float t = 0; t <= 1; t += incrementSpeed / 2) {  // Denser base
             float baseX = vertices[i][0] * (1 - t) + vertices[nextIndex][0] * t;
             float baseY = vertices[i][1] * (1 - t) + vertices[nextIndex][1] * t;
             float baseZ = vertices[i][2] * (1 - t) + vertices[nextIndex][2] * t;
-            calculateForSurfaceWithCustomChar(baseX, baseY, baseZ, shadingCharacters[3]);
+
+            calculateForSurfaceWithCustomChar(baseX, baseY, baseZ, '=');
         }
     }
 }
+
+
+
+
+
+
 
 // Function to display the main menu
 void displayMenu() {
@@ -352,7 +381,7 @@ int main() {
         } else if (choice == 'q') {
             // Restore terminal settings
             setTerminalRawMode(0);  
-            
+
             printf("\nProgram exited.\n");
             return 0;
         }
