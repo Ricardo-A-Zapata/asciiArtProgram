@@ -38,10 +38,8 @@ float x, y, z, ooz;
 int xp, yp, idx;
 
 // Updated shading characters array with a wider range of characters
-const char shadingCharacters[] = ".'^,:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
+const char shadingCharacters[] = ".'^,:;Il!i><~+_-?][}{1)(|tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
 
-// ASCII characters for each face of the cube
-const char cubeFaceChar[6] = {'#', '@', '%', '*', '+', '='};
 
 // Function to set the terminal in raw mode to capture input without waiting for Enter
 void setTerminalRawMode(int enable) {
